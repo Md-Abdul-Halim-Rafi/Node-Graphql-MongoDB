@@ -10,12 +10,26 @@ const {
 
 const { SECRET_KEY } = require("../../config");
 
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user.id, email: user.email, username: user.username },
+    SECRET_KEY,
+    {
+      expiresIn: "1h",
+    }
+  );
+};
+
 module.exports = {
   Mutation: {
     async login(_, { username, password }) {
       const { errors, valid } = validateLoginInput(username, password);
 
-      const user = User.findOne({ username });
+      if (!valid) {
+        throw new UserInputError("Errors", { errors });
+      }
+
+      const user = await User.findOne({ username });
       if (!user) {
         errors.general = "User not found";
         throw new UserInputError("User not found", { errors });
@@ -26,6 +40,10 @@ module.exports = {
         errors.general = "Wront credentials";
         throw new UserInputError("Wront credentials", { errors });
       }
+
+      const token = generateToken(user);
+
+      return { ...user._doc, id: user._id, token };
     },
     async register(_, args, context, info) {
       let { email, username, password, confirmPassword } = args.registerInput;
@@ -62,9 +80,7 @@ module.exports = {
 
       const res = await newUser.save();
 
-      const token = jwt.sign({ id: res.id, email, username }, SECRET_KEY, {
-        expiresIn: "1h",
-      });
+      const token = generateToken(res);
 
       return { ...res._doc, id: res._id, token };
     },
