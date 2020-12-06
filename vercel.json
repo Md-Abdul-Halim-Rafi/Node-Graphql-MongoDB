@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "App name",
   "builds": [
     {
       "src": "index.js",
